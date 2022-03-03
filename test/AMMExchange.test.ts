@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { Provider } from "@ethersproject/abstract-provider";
 import {
   AMMExchange,
   AMMExchange__factory,
@@ -8,6 +9,12 @@ import {
 } from "../typechain";
 import { BigNumber, Contract, Signer } from "ethers";
 import { toBN, getOutputAmount } from "./utils";
+import {
+  getEventData,
+  EXCHANGE_EVENT,
+  ADD_LIQUIDITY_EVENT,
+  UPDATE_RESERVES_EVENT,
+} from "./eventdecoder";
 
 describe("AMMExchange", () => {
   let admin: Signer;
@@ -111,7 +118,8 @@ describe("AMMExchange", () => {
     const signerInitiatialTWDBalance = await balanceOf(signerAddress, TWD);
     const signerInitiatialUSDBalance = await balanceOf(signerAddress, USD);
 
-    await ammExchange.connect(signer).exchange(toBN(amount), path); // Exchange assets
+    const tx = await ammExchange.connect(signer).exchange(toBN(amount), path); // Exchange assets
+    const txReceipt = await tx.wait();
 
     const ammExchangeFinalTWDBalance = await balanceOf(
       ammExchange.address,
@@ -134,17 +142,19 @@ describe("AMMExchange", () => {
       signerInitiatialUSDBalance,
       signerFinalTWDBalance,
       signerFinalUSDBalance,
+      txReceipt,
     };
   };
 
   describe("Exchange", () => {
-    it("should exchange USD for TWD", async () => {
-      const signer = alice;
-      const amount = 450;
-      const path = [USD.address, TWD.address];
+    it("exchange USD <=> TWD and TWD <=> USD", async () => {
+      // Exchange USD <=> TWD
+      let signer = alice;
+      let amount = 450;
+      let path = [USD.address, TWD.address];
 
       await approve(ammExchange.address, amount, USD, signer);
-      const reserves = await ammExchange.getReserves();
+      let reserves = await ammExchange.getReserves();
       let amountOutBN = await getOutputAmount(
         toBN(amount),
         reserves.rt,
@@ -152,7 +162,7 @@ describe("AMMExchange", () => {
       );
       amountOutBN = amountOutBN.abs();
 
-      const {
+      let {
         ammExchangeInitialTWDBalance,
         ammExchangeInitialUSDBalance,
         ammExchangeFinalTWDBalance,
@@ -161,7 +171,19 @@ describe("AMMExchange", () => {
         signerInitiatialUSDBalance,
         signerFinalTWDBalance,
         signerFinalUSDBalance,
+        txReceipt,
       } = await exchange(path, amount, signer);
+
+      const exchangeDecodedEvent = await getEventData(
+        txReceipt,
+        EXCHANGE_EVENT
+      );
+      const updateReservesDecodedEvent = await getEventData(
+        txReceipt,
+        UPDATE_RESERVES_EVENT
+      );
+
+      console.log(exchangeDecodedEvent, updateReservesDecodedEvent);
 
       expect(signerFinalTWDBalance).to.equal(
         signerInitiatialTWDBalance.add(amountOutBN)
@@ -178,47 +200,49 @@ describe("AMMExchange", () => {
       expect(ammExchangeFinalUSDBalance).to.equal(
         ammExchangeInitialUSDBalance.add(toBN(amount))
       );
-    });
 
-    it("should exchange TWD for USD", async () => {
-      const signer = bob;
-      const amount = 6000;
-      const path = [TWD.address, USD.address];
+      // Exchange TWD <=> USD using updated reserves
+      signer = bob;
+      amount = 6000;
+      path = [TWD.address, USD.address];
 
       await approve(ammExchange.address, amount, TWD, signer);
-      const reserves = await ammExchange.getReserves();
-      let amountOutBN = await getOutputAmount(
+
+      reserves = await ammExchange.getReserves();
+
+      amountOutBN = await getOutputAmount(
         toBN(amount),
         reserves.rt,
         reserves.ru
       );
       amountOutBN = amountOutBN.abs();
 
-      const {
-        ammExchangeInitialTWDBalance,
-        ammExchangeInitialUSDBalance,
-        ammExchangeFinalTWDBalance,
-        ammExchangeFinalUSDBalance,
-        signerInitiatialTWDBalance,
-        signerInitiatialUSDBalance,
-        signerFinalTWDBalance,
-        signerFinalUSDBalance,
+      let {
+        ammExchangeInitialTWDBalance: ammExchangeInitialTWDBalance_2,
+        ammExchangeInitialUSDBalance: ammExchangeInitialUSDBalance_2,
+        ammExchangeFinalTWDBalance: ammExchangeFinalTWDBalance_2,
+        ammExchangeFinalUSDBalance: ammExchangeFinalUSDBalance_2,
+        signerInitiatialTWDBalance: signerInitiatialTWDBalance_2,
+        signerInitiatialUSDBalance: signerInitiatialUSDBalance_2,
+        signerFinalTWDBalance: signerFinalTWDBalance_2,
+        signerFinalUSDBalance: signerFinalUSDBalance_2,
+        txReceipt: txReceipt_2,
       } = await exchange(path, amount, signer);
 
-      expect(signerFinalTWDBalance).to.equal(
-        signerInitiatialTWDBalance.sub(toBN(amount))
+      expect(signerFinalTWDBalance_2).to.equal(
+        signerInitiatialTWDBalance_2.sub(toBN(amount))
       );
 
-      expect(signerFinalUSDBalance).to.equal(
-        signerInitiatialUSDBalance.add(amountOutBN)
+      expect(signerFinalUSDBalance_2).to.equal(
+        signerInitiatialUSDBalance_2.add(amountOutBN)
       );
 
-      expect(ammExchangeFinalTWDBalance).to.equal(
-        ammExchangeInitialTWDBalance.add(toBN(amount))
+      expect(ammExchangeFinalTWDBalance_2).to.equal(
+        ammExchangeInitialTWDBalance_2.add(toBN(amount))
       );
 
-      expect(ammExchangeFinalUSDBalance).to.equal(
-        ammExchangeInitialUSDBalance.sub(amountOutBN)
+      expect(ammExchangeFinalUSDBalance_2).to.equal(
+        ammExchangeInitialUSDBalance_2.sub(amountOutBN)
       );
     });
   });

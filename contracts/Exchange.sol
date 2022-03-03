@@ -23,7 +23,7 @@ contract AMMExchange {
 
     event Exchange(
         address indexed sender,
-        IERC20 indexed tradedToken,
+        address indexed tradedToken,
         uint256 indexed tradedAmount
     );
 
@@ -74,7 +74,7 @@ contract AMMExchange {
             _updateReserves(outputAmount, int256(amount));
         }
 
-        emit Exchange(msg.sender, inputToken, amount);
+        emit Exchange(msg.sender, address(inputToken), amount);
     }
 
     function _exchange(
