@@ -10,4 +10,8 @@ contract MockToken is ERC20 {
     {
         _mint(_msgSender(), 100000000000000000000000000);
     }
+
+    function mint(address account, uint256 amount) external {
+        _mint(account, amount);
+    }
 }

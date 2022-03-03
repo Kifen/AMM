@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract AMMExchange {
     using SafeERC20 for IERC20;
@@ -59,7 +60,7 @@ contract AMMExchange {
         IERC20 inputToken = path[0];
         IERC20 outputToken = path[1];
 
-        uint256 outputAmount = _exchange(
+        int256 outputAmount = _exchange(
             inputToken,
             outputToken,
             amount,
@@ -68,9 +69,9 @@ contract AMMExchange {
         );
 
         if (inputToken == TWD) {
-            _updateReserves(int256(amount), -int256(outputAmount));
+            _updateReserves(int256(amount), outputAmount);
         } else {
-            _updateReserves(-int256(outputAmount), int256(amount));
+            _updateReserves(outputAmount, int256(amount));
         }
 
         emit Exchange(msg.sender, inputToken, amount);
@@ -82,7 +83,7 @@ contract AMMExchange {
         uint256 inputAmount,
         uint256 reserveTWD,
         uint256 reserveUSD
-    ) internal returns (uint256) {
+    ) internal returns (int256) {
         require(
             _sufficientAllowance(
                 inputToken,
@@ -98,28 +99,34 @@ contract AMMExchange {
             "AMMExchange: insufficient inputToken balance"
         );
 
-        uint256 outputAmount = _getAmountOut(
-            inputAmount,
-            reserveTWD,
-            reserveUSD
+        int256 outputAmount = _getAmountOut(
+            int256(inputAmount),
+            int256(reserveTWD),
+            int256(reserveUSD)
         );
+        uint256 outputAmount_uint256 = uint256(-outputAmount);
+
         require(
-            _sufficientBalance(outputToken, outputAmount, address(this)),
+            _sufficientBalance(
+                outputToken,
+                outputAmount_uint256,
+                address(this)
+            ),
             "AMMExchange: insufficient onputToken balance"
         );
 
         _safeTransferFrom(inputToken, msg.sender, address(this), inputAmount);
-        _safeTransferFrom(outputToken, address(this), msg.sender, outputAmount);
+        outputToken.transfer(msg.sender, outputAmount_uint256);
 
         return outputAmount;
     }
 
     function _getAmountOut(
-        uint256 inputAmount,
-        uint256 rt,
-        uint256 ru
-    ) internal pure returns (uint256 outAmount) {
-        outAmount = (((rt * ru) / rt) * inputAmount) - ru;
+        int256 inputAmount,
+        int256 rt,
+        int256 ru
+    ) internal pure returns (int256 outAmount) {
+        outAmount = ((rt * ru) / (rt + inputAmount)) - ru;
     }
 
     function _safeTransferFrom(
@@ -176,5 +183,10 @@ contract AMMExchange {
         }
 
         return false;
+    }
+
+    function getReserves() public view returns (uint256 ru, uint256 rt) {
+        ru = Ru;
+        rt = Rt;
     }
 }
