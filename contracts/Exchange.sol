@@ -3,8 +3,11 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AMMExchange {
+    using SafeERC20 for IERC20;
+
     IERC20 immutable TWD;
     IERC20 immutable USD;
 
@@ -55,8 +58,6 @@ contract AMMExchange {
 
         IERC20 inputToken = path[0];
         IERC20 outputToken = path[1];
-        IERC20 TWD_ = TWD;
-        IERC20 USD_ = USD;
 
         uint256 outputAmount = _exchange(
             inputToken,
@@ -66,7 +67,7 @@ contract AMMExchange {
             Ru
         );
 
-        if (inputToken == TWD_) {
+        if (inputToken == TWD) {
             _updateReserves(int256(amount), -int256(outputAmount));
         } else {
             _updateReserves(-int256(outputAmount), int256(amount));
@@ -127,7 +128,10 @@ contract AMMExchange {
         address to,
         uint256 amount
     ) internal {
-        token.transferFrom(from, to, amount);
+        require(
+            token.transferFrom(from, to, amount),
+            "AMMExchange: TRANSFER FAILED"
+        );
     }
 
     function _sufficientAllowance(
