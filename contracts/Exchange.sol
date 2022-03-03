@@ -44,19 +44,35 @@ contract AMMExchange {
         emit AddLiquidity(msg.sender, _twd, _usd);
     }
 
-    function exchangeTWDForUSD(uint256 amount, IERC20[] memory path) external {
+    function exchange(uint256 amount, IERC20[] memory path) external {
         require(
             path.length == 2 &&
                 address(path[0]) != address(0) &&
-                address(path[1]) != address(0),
+                address(path[1]) != address(0) &&
+                _validPath(path),
             "AMMExchange: invalid path"
         );
 
+        IERC20 inputToken = path[0];
+        IERC20 outputToken = path[1];
         IERC20 TWD_ = TWD;
         IERC20 USD_ = USD;
 
-        _exchange(path[0], path[1], amount, Rt, Ru);
-        emit Exchange(msg.sender, TWD_, amount);
+        uint256 outputAmount = _exchange(
+            inputToken,
+            outputToken,
+            amount,
+            Rt,
+            Ru
+        );
+
+        if (inputToken == TWD_) {
+            _updateReserves(int256(amount), -int256(outputAmount));
+        } else {
+            _updateReserves(-int256(outputAmount), int256(amount));
+        }
+
+        emit Exchange(msg.sender, inputToken, amount);
     }
 
     function _exchange(
@@ -65,7 +81,7 @@ contract AMMExchange {
         uint256 inputAmount,
         uint256 reserveTWD,
         uint256 reserveUSD
-    ) internal {
+    ) internal returns (uint256) {
         require(
             _sufficientAllowance(
                 inputToken,
@@ -93,6 +109,8 @@ contract AMMExchange {
 
         _safeTransferFrom(inputToken, msg.sender, address(this), inputAmount);
         _safeTransferFrom(outputToken, address(this), msg.sender, outputAmount);
+
+        return outputAmount;
     }
 
     function _getAmountOut(
@@ -140,5 +158,19 @@ contract AMMExchange {
         Rt = newRt;
 
         emit UpdateReserves(oldRu, newRu, newRt, Rt);
+    }
+
+    function _validPath(IERC20[] memory path) public view returns (bool) {
+        IERC20 TWD_ = TWD;
+        IERC20 USD_ = USD;
+
+        if (
+            (path[0] == TWD_ && path[1] == USD_) ||
+            (path[0] == USD_ && path[1] == TWD_)
+        ) {
+            return true;
+        }
+
+        return false;
     }
 }
