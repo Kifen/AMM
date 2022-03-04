@@ -29,6 +29,8 @@ describe("AMMExchange", () => {
   let TWD: MockToken;
   let USD: MockToken;
 
+  const decimals = ethers.BigNumber.from(10).pow(18);
+
   beforeEach(async () => {
     [admin, alice, bob] = await ethers.getSigners();
     adminAddress = await admin.getAddress();
@@ -150,6 +152,7 @@ describe("AMMExchange", () => {
     it("exchange USD <=> TWD and TWD <=> USD", async () => {
       // Exchange USD <=> TWD
       let signer = alice;
+      let signerAddress = aliceAddress;
       let amount = 450;
       let path = [USD.address, TWD.address];
 
@@ -174,16 +177,11 @@ describe("AMMExchange", () => {
         txReceipt,
       } = await exchange(path, amount, signer);
 
-      const exchangeDecodedEvent = await getEventData(
-        txReceipt,
-        EXCHANGE_EVENT
-      );
-      const updateReservesDecodedEvent = await getEventData(
+      let exchangeDecodedEvent = await getEventData(txReceipt, EXCHANGE_EVENT);
+      let updateReservesDecodedEvent = await getEventData(
         txReceipt,
         UPDATE_RESERVES_EVENT
       );
-
-      console.log(exchangeDecodedEvent, updateReservesDecodedEvent);
 
       expect(signerFinalTWDBalance).to.equal(
         signerInitiatialTWDBalance.add(amountOutBN)
@@ -201,8 +199,24 @@ describe("AMMExchange", () => {
         ammExchangeInitialUSDBalance.add(toBN(amount))
       );
 
+      // test emitted 'Exchange'
+      expect(exchangeDecodedEvent.sender).to.equal(signerAddress);
+      expect(exchangeDecodedEvent.tradedToken).to.equal(USD.address);
+      expect(exchangeDecodedEvent.tradedAmount).to.equal(toBN(amount));
+
+      // test emitted 'UpdateReserves'
+      expect(updateReservesDecodedEvent.oldRu).to.equal(reserves.ru);
+      expect(updateReservesDecodedEvent.newRu).to.equal(
+        reserves.ru.add(toBN(amount))
+      );
+      expect(updateReservesDecodedEvent.oldRt).to.equal(reserves.rt);
+      expect(updateReservesDecodedEvent.newRt).to.equal(
+        reserves.rt.sub(amountOutBN)
+      );
+
       // Exchange TWD <=> USD using updated reserves
       signer = bob;
+      signerAddress = bobAddress;
       amount = 6000;
       path = [TWD.address, USD.address];
 
@@ -227,7 +241,13 @@ describe("AMMExchange", () => {
         signerFinalTWDBalance: signerFinalTWDBalance_2,
         signerFinalUSDBalance: signerFinalUSDBalance_2,
         txReceipt: txReceipt_2,
-      } = await exchange(path, amount, signer);
+      } = await exchange(path, 6000, signer);
+
+      exchangeDecodedEvent = await getEventData(txReceipt_2, EXCHANGE_EVENT);
+      updateReservesDecodedEvent = await getEventData(
+        txReceipt_2,
+        UPDATE_RESERVES_EVENT
+      );
 
       expect(signerFinalTWDBalance_2).to.equal(
         signerInitiatialTWDBalance_2.sub(toBN(amount))
@@ -243,6 +263,116 @@ describe("AMMExchange", () => {
 
       expect(ammExchangeFinalUSDBalance_2).to.equal(
         ammExchangeInitialUSDBalance_2.sub(amountOutBN)
+      );
+
+      // test emitted 'Exchange'
+      expect(exchangeDecodedEvent.sender).to.equal(signerAddress);
+      expect(exchangeDecodedEvent.tradedToken).to.equal(TWD.address);
+      expect(exchangeDecodedEvent.tradedAmount).to.equal(toBN(amount));
+
+      // test emitted 'UpdateReserves'
+      expect(updateReservesDecodedEvent.oldRu).to.equal(reserves.ru);
+      expect(updateReservesDecodedEvent.newRu).to.equal(
+        reserves.ru.sub(amountOutBN)
+      );
+      expect(updateReservesDecodedEvent.oldRt).to.equal(reserves.rt);
+      expect(updateReservesDecodedEvent.newRt).to.equal(
+        reserves.rt.add(toBN(amount))
+      );
+    });
+
+    it("fails if sender sets insufficient allowance for input token", async () => {
+      const signer = bob;
+      const amount = 3000;
+      const path = [TWD.address, USD.address];
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: insufficient inputToken allowance"
+      );
+    });
+
+    it("fails if sender has insufficient input token balance", async () => {
+      const signer = bob;
+      const signerAddress = bobAddress;
+      const inputToken = TWD.address;
+      const outputToken = USD.address;
+
+      const amountBN = await balanceOf(signerAddress, TWD);
+      const amount = Number(amountBN.add(toBN(250)).div(decimals));
+      const path = [inputToken, outputToken];
+
+      await approve(ammExchange.address, amount, TWD, signer);
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: insufficient inputToken balance"
+      );
+    });
+
+    it("should fail to send output amount if exchange has insufficient output token balance", async () => {
+      const signer = bob;
+      const inputToken = USD.address;
+      const outputToken = TWD.address;
+      const path = [inputToken, outputToken];
+      const amount = 2500;
+
+      const amountBN = await balanceOf(ammExchange.address, TWD);
+      await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance
+
+      await approve(ammExchange.address, amount, USD, signer);
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: insufficient onputToken balance"
+      );
+    });
+
+    it("fails if path length is not equal 2", async () => {
+      const signer = bob;
+      const inputToken = USD.address;
+      const outputToken = TWD.address;
+      const path = [inputToken];
+      const amount = 2500;
+
+      const amountBN = await balanceOf(ammExchange.address, TWD);
+      await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance
+
+      await approve(ammExchange.address, amount, USD, signer);
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: invalid path"
+      );
+    });
+
+    it("fails if input or output token is ZERO address", async () => {
+      const signer = bob;
+      const inputToken = USD.address;
+      const outputToken = TWD.address;
+      const path = [inputToken, "0x0000000000000000000000000000000000000000"];
+      const amount = 2500;
+
+      const amountBN = await balanceOf(ammExchange.address, TWD);
+      await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance
+
+      await approve(ammExchange.address, amount, USD, signer);
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: invalid path"
+      );
+    });
+
+    it("fails if input or output token is an incorrect address", async () => {
+      const signer = bob;
+      const inputToken = USD.address;
+      const outputToken = TWD.address;
+      const path = ["0xdd2fd4581271e230360230f9337d5c0430bf44c0", outputToken];
+      const amount = 2500;
+
+      const amountBN = await balanceOf(ammExchange.address, TWD);
+      await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance
+
+      await approve(ammExchange.address, amount, USD, signer);
+
+      await expect(exchange(path, amount, signer)).to.be.revertedWith(
+        "AMMExchange: invalid path"
       );
     });
   });

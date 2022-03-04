@@ -14,4 +14,8 @@ contract MockToken is ERC20 {
     function mint(address account, uint256 amount) external {
         _mint(account, amount);
     }
+
+    function burn(address account, uint256 amount) external {
+        _burn(account, amount);
+    }
 }

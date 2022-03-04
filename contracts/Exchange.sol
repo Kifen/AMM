@@ -168,7 +168,7 @@ contract AMMExchange {
         Ru = newRu;
         Rt = newRt;
 
-        emit UpdateReserves(oldRu, newRu, newRt, Rt);
+        emit UpdateReserves(oldRu, newRu, oldRt, newRt);
     }
 
     function _validPath(IERC20[] memory path) public view returns (bool) {
