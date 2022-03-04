@@ -8,13 +8,14 @@ import {
   MockToken__factory,
 } from "../typechain";
 import { BigNumber, Contract, Signer } from "ethers";
-import { toBN, getOutputAmount } from "./utils";
 import {
+  toBN,
+  getOutputAmount,
   getEventData,
   EXCHANGE_EVENT,
   ADD_LIQUIDITY_EVENT,
   UPDATE_RESERVES_EVENT,
-} from "./eventdecoder";
+} from "./helpers";
 
 describe("AMMExchange", () => {
   let admin: Signer;
@@ -117,8 +118,8 @@ describe("AMMExchange", () => {
       USD
     );
 
-    const signerInitiatialTWDBalance = await balanceOf(signerAddress, TWD);
-    const signerInitiatialUSDBalance = await balanceOf(signerAddress, USD);
+    const signerInitialTWDBalance = await balanceOf(signerAddress, TWD);
+    const signerInitialUSDBalance = await balanceOf(signerAddress, USD);
 
     const tx = await ammExchange.connect(signer).exchange(toBN(amount), path); // Exchange assets
     const txReceipt = await tx.wait();
@@ -140,8 +141,8 @@ describe("AMMExchange", () => {
       ammExchangeInitialUSDBalance,
       ammExchangeFinalTWDBalance,
       ammExchangeFinalUSDBalance,
-      signerInitiatialTWDBalance,
-      signerInitiatialUSDBalance,
+      signerInitialTWDBalance,
+      signerInitialUSDBalance,
       signerFinalTWDBalance,
       signerFinalUSDBalance,
       txReceipt,
@@ -170,8 +171,8 @@ describe("AMMExchange", () => {
         ammExchangeInitialUSDBalance,
         ammExchangeFinalTWDBalance,
         ammExchangeFinalUSDBalance,
-        signerInitiatialTWDBalance,
-        signerInitiatialUSDBalance,
+        signerInitialTWDBalance,
+        signerInitialUSDBalance,
         signerFinalTWDBalance,
         signerFinalUSDBalance,
         txReceipt,
@@ -184,11 +185,11 @@ describe("AMMExchange", () => {
       );
 
       expect(signerFinalTWDBalance).to.equal(
-        signerInitiatialTWDBalance.add(amountOutBN)
+        signerInitialTWDBalance.add(amountOutBN)
       );
 
       expect(signerFinalUSDBalance).to.equal(
-        signerInitiatialUSDBalance.sub(toBN(amount))
+        signerInitialUSDBalance.sub(toBN(amount))
       );
 
       expect(ammExchangeFinalTWDBalance).to.equal(
@@ -236,8 +237,8 @@ describe("AMMExchange", () => {
         ammExchangeInitialUSDBalance: ammExchangeInitialUSDBalance_2,
         ammExchangeFinalTWDBalance: ammExchangeFinalTWDBalance_2,
         ammExchangeFinalUSDBalance: ammExchangeFinalUSDBalance_2,
-        signerInitiatialTWDBalance: signerInitiatialTWDBalance_2,
-        signerInitiatialUSDBalance: signerInitiatialUSDBalance_2,
+        signerInitialTWDBalance: signerInitiatialTWDBalance_2,
+        signerInitialUSDBalance: signerInitiatialUSDBalance_2,
         signerFinalTWDBalance: signerFinalTWDBalance_2,
         signerFinalUSDBalance: signerFinalUSDBalance_2,
         txReceipt: txReceipt_2,
