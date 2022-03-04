@@ -1,10 +1,6 @@
 import { ethers, Signer } from "ethers";
 import { Provider } from "@ethersproject/abstract-provider";
 
-const localProvider = new ethers.providers.JsonRpcProvider(
-  "http://localhost:8545"
-);
-
 const decoder = new ethers.utils.AbiCoder();
 
 export const EXCHANGE_EVENT = "EXCHANGE";

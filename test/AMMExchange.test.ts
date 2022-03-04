@@ -331,7 +331,7 @@ describe("AMMExchange", () => {
       const inputToken = USD.address;
       const outputToken = TWD.address;
       const path = [inputToken];
-      const amount = 2500;
+      const amount = 5099;
 
       const amountBN = await balanceOf(ammExchange.address, TWD);
       await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance
@@ -365,7 +365,7 @@ describe("AMMExchange", () => {
       const inputToken = USD.address;
       const outputToken = TWD.address;
       const path = ["0xdd2fd4581271e230360230f9337d5c0430bf44c0", outputToken];
-      const amount = 2500;
+      const amount = 120;
 
       const amountBN = await balanceOf(ammExchange.address, TWD);
       await TWD.burn(ammExchange.address, amountBN); // reduce exchange USD token balance

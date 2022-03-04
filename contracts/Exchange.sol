@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract AMMExchange {
     using SafeERC20 for IERC20;
 
-    IERC20 immutable TWD;
-    IERC20 immutable USD;
+    IERC20 public immutable TWD;
+    IERC20 public immutable USD;
 
     uint256 public Rt; // TWD reserve
     uint256 public Ru; // USD reserve
