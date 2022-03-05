@@ -3,80 +3,30 @@ import { Provider } from "@ethersproject/abstract-provider";
 
 const decoder = new ethers.utils.AbiCoder();
 
-export const EXCHANGE_EVENT = "EXCHANGE";
+export const EXCHANGE_EVENT = "Exchange";
+export const OPEN_POSITION_EVENT = "OpenPosition";
+export const DEPOSIT_TOKEN_EVENT = "DepositToken";
 export const ADD_LIQUIDITY_EVENT = "AddLiquidity";
 export const UPDATE_RESERVES_EVENT = "UpdateReserves";
 
-// Retrieved from artifacts/contracts/Exchange.sol/AMMExchange.json
 const AddLiquidity = [
-  {
-    indexed: true,
-    internalType: "address",
-    name: "LP",
-    type: "address",
-  },
-  {
-    indexed: true,
-    internalType: "uint256",
-    name: "twd",
-    type: "uint256",
-  },
-  {
-    indexed: true,
-    internalType: "uint256",
-    name: "usd",
-    type: "uint256",
-  },
+  "event AddLiquidity(address indexed LP, uint256 indexed twd, uint256 indexed usd)",
 ];
 
-// Retrieved from artifacts/contracts/Exchange.sol/AMMExchange.json
 const Exchange = [
-  {
-    indexed: true,
-    internalType: "address",
-    name: "sender",
-    type: "address",
-  },
-  {
-    indexed: true,
-    internalType: "address",
-    name: "tradedToken",
-    type: "address",
-  },
-  {
-    indexed: true,
-    internalType: "uint256",
-    name: "tradedAmount",
-    type: "uint256",
-  },
+  "event Exchange(address indexed sender, address indexed tradedToken, uint256 indexed tradedAmount)",
 ];
 
-// Retrieved from artifacts/contracts/Exchange.sol/AMMExchange.json
 const UpdateReserves = [
-  {
-    indexed: false,
-    internalType: "uint256",
-    name: "oldRu",
-    type: "uint256",
-  },
-  {
-    indexed: false,
-    internalType: "uint256",
-    name: "newRu",
-    type: "uint256",
-  },
-  {
-    indexed: false,
-    internalType: "uint256",
-    name: "oldRt",
-    type: "uint256",
-  },
-  {
-    indexed: false,
-    internalType: "uint256",
-    name: "newRt",
-    type: "uint256",
-  },
+  "event UpdateReserves(uint256 oldRu, uint256 newRu, uint256 oldRt, uint256 newRt)",
+];
+
+const DepositToken = [
+  "event DepositToken(address indexed account, address indexed token, uint256 indexed amount)",
+];
+
+const OpenPosition = [
+  "event OpenPosition(address indexed account, address indexed leverage, uint256 indexed amount, uint256 side)",
 ];
 
 const AddLiquidity_Event_Hash = ethers.utils.keccak256(
@@ -89,6 +39,14 @@ const Exchange_Event_Hash = ethers.utils.keccak256(
 
 const UpdateReserves_Event_Hash = ethers.utils.keccak256(
   ethers.utils.toUtf8Bytes("UpdateReserves(uint256,uint256,uint256,uint256)")
+);
+
+const DepositToken_Event_Hash = ethers.utils.keccak256(
+  ethers.utils.toUtf8Bytes("DepositToken(address,address,uint256)")
+);
+
+const OpenPosition_Event_Hash = ethers.utils.keccak256(
+  ethers.utils.toUtf8Bytes("OpenPosition(address,uint64,uint256,uint256)")
 );
 
 const getObj = (event: string) => {
@@ -108,7 +66,15 @@ const getObj = (event: string) => {
       ABI = Exchange;
       hash = Exchange_Event_Hash;
       break;
+    case DEPOSIT_TOKEN_EVENT:
+      ABI = DepositToken;
+      hash = DepositToken_Event_Hash;
+      break;
     default:
+    case OPEN_POSITION_EVENT:
+      ABI = OpenPosition;
+      hash = OpenPosition_Event_Hash;
+      break;
       ABI = undefined;
   }
 
@@ -119,78 +85,20 @@ const getObj = (event: string) => {
   return { abi: ABI, hash: hash };
 };
 
-export const getEventData = async (
-  txReceipt: any,
-  event: string
-): Promise<any> => {
-  let decodedEvent: any;
+export const parseEvents = (receipt: any, event: string) => {
+  const { abi, hash } = getObj(event);
 
-  switch (event) {
-    case EXCHANGE_EVENT:
-      decodedEvent = decodeIndexedEvent(EXCHANGE_EVENT, txReceipt);
+  let log;
+  for (let i = 0; i < receipt.logs.length; i++) {
+    log = receipt.logs[i];
+
+    if (log.topics[0] === hash) {
+      log = receipt.logs[i];
       break;
-    case UPDATE_RESERVES_EVENT:
-      decodedEvent = decodeUnindexedEvent(UPDATE_RESERVES_EVENT, txReceipt);
-      break;
-  }
-
-  return decodedEvent;
-};
-
-const decodeUnindexedEvent = (event: string, txReceipt: any) => {
-  const obj = getObj(event);
-  let types: string[] = [];
-  let names: string[] = [];
-
-  let unIndexedEvents = obj.abi.filter((e) => e.indexed === false);
-  for (const element of unIndexedEvents) {
-    types.push(element["type"]);
-    names.push(element["name"]);
-  }
-
-  let data;
-  for (const item of txReceipt.logs) {
-    if (item.topics[0] == obj.hash) {
-      data = item.data;
     }
   }
 
-  const decodedLogs = decoder.decode([...types], data);
-  return Object.assign(
-    {},
-    ...names.map((n, index) => ({ [n]: decodedLogs[index] }))
-  );
-};
-
-const decodeIndexedEvent = (event: string, txReceipt: any): any => {
-  try {
-    let types: string[] = [];
-    let names: string[] = [];
-
-    const obj = getObj(event);
-
-    for (const element of obj.abi) {
-      if (element["indexed"]) {
-        types.push(element["type"]);
-        names.push(element["name"]);
-      }
-    }
-
-    let topics: string[] = [];
-    for (const item of txReceipt.logs) {
-      if (item.topics[0] == obj.hash) {
-        topics = item.topics.slice(1);
-      }
-    }
-    const decoded = topics.map((element, index) => {
-      return decoder.decode([types[index]], element).toString();
-    });
-
-    return Object.assign(
-      {},
-      ...names.map((n, index) => ({ [n]: decoded[index] }))
-    );
-  } catch (error) {
-    throw error;
-  }
+  let iface = new ethers.utils.Interface(abi);
+  let decodedLog = iface.parseLog(log);
+  return decodedLog.args;
 };

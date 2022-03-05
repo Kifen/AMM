@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Provider } from "@ethersproject/abstract-provider";
 import {
   AMMExchange,
   AMMExchange__factory,
@@ -11,8 +10,12 @@ import { BigNumber, Contract, Signer } from "ethers";
 import {
   toBN,
   getOutputAmount,
-  getEventData,
+  parseEvents,
   EXCHANGE_EVENT,
+  deployMockToken,
+  batchMint,
+  balanceOf,
+  approve,
   ADD_LIQUIDITY_EVENT,
   UPDATE_RESERVES_EVENT,
 } from "./helpers";
@@ -39,8 +42,8 @@ describe("AMMExchange", () => {
     bobAddress = await bob.getAddress();
 
     // Deploy mock TWD and USD
-    TWD = await deployMockTokens("TWD Token", "TWD");
-    USD = await deployMockTokens("USD Token", "USD");
+    TWD = await deployMockToken("TWD Token", "TWD", admin);
+    USD = await deployMockToken("USD Token", "USD", admin);
 
     // Deploy AMMExchange
     ammExchange = await new AMMExchange__factory(admin).deploy(
@@ -62,46 +65,13 @@ describe("AMMExchange", () => {
     expect(await balanceOf(ammExchange.address, USD)).to.equal(toBN(amountB));
   });
 
-  const deployMockTokens = async (name: string, symbol: string) => {
-    // return await new MockToken__factory(admin).deploy(name, symbol);
-    return await new MockToken__factory(admin).deploy(name, symbol);
-  };
-
-  const batchMint = async (
-    accounts: string[],
-    amount: number,
-    token: Contract
-  ) => {
-    await Promise.all(
-      accounts.map(async (account) => {
-        token.mint(account, toBN(amount));
-      })
-    );
-  };
-
-  const balanceOf = async (
-    account: string,
-    token: Contract
-  ): Promise<BigNumber> => {
-    return await token.balanceOf(account);
-  };
-
-  const approve = async (
-    spender: string,
-    amount: number,
-    token: Contract,
-    signer = admin
-  ) => {
-    await token.connect(signer).approve(spender, toBN(amount));
-  };
-
   const addLiquidity = async (amountA: number, amountB: number) => {
     const amountABN = toBN(amountA);
     const amountBBN = toBN(amountB);
 
     // set approvals
-    await approve(ammExchange.address, amountA, TWD);
-    await approve(ammExchange.address, amountB, USD);
+    await approve(ammExchange.address, amountA, TWD, admin);
+    await approve(ammExchange.address, amountB, USD, admin);
 
     // add liquidity to AMMExchange
     await ammExchange.addLiquidity(amountABN, amountBBN);
@@ -178,8 +148,8 @@ describe("AMMExchange", () => {
         txReceipt,
       } = await exchange(path, amount, signer);
 
-      let exchangeDecodedEvent = await getEventData(txReceipt, EXCHANGE_EVENT);
-      let updateReservesDecodedEvent = await getEventData(
+      let exchangeDecodedEvent = await parseEvents(txReceipt, EXCHANGE_EVENT);
+      let updateReservesDecodedEvent = await parseEvents(
         txReceipt,
         UPDATE_RESERVES_EVENT
       );
@@ -244,8 +214,8 @@ describe("AMMExchange", () => {
         txReceipt: txReceipt_2,
       } = await exchange(path, 6000, signer);
 
-      exchangeDecodedEvent = await getEventData(txReceipt_2, EXCHANGE_EVENT);
-      updateReservesDecodedEvent = await getEventData(
+      exchangeDecodedEvent = await parseEvents(txReceipt_2, EXCHANGE_EVENT);
+      updateReservesDecodedEvent = await parseEvents(
         txReceipt_2,
         UPDATE_RESERVES_EVENT
       );

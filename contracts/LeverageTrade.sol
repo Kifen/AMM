@@ -96,10 +96,9 @@ contract LeverageTrade is AMMExchange {
         returns (uint256)
     {
         uint256 collateral = account.collateral;
-        uint64 maxLeverage = MAX_LEVERAGE;
         uint64 currentLeverage = account.totalLeverage;
 
-        return (collateral * maxLeverage) - (collateral * currentLeverage);
+        return (collateral * MAX_LEVERAGE) - (collateral * currentLeverage);
     }
 
     function openLongPosition(IERC20 _token, uint64 _leverage) external {
@@ -177,5 +176,13 @@ contract LeverageTrade is AMMExchange {
             _expectedPositionValue <= remAccountValue,
             "LeverageTrade: exceeded MAX position"
         );
+    }
+
+    function getAccount(address _account, IERC20 _token)
+        external
+        view
+        returns (Account memory)
+    {
+        return accounts[_account][_token];
     }
 }
