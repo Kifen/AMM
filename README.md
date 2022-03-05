@@ -1,5 +1,5 @@
 
-## AMM
+# AMM
 
 AMM is comprisedd of two smart contracts AMMExchange and LeverageTrade. This project uses the hardhat framework for contract development and deployment. 
 
