@@ -1,15 +1,21 @@
 pragma solidity ^0.8.0;
 
 library IterableMapping {
-    struct StakeInfo {
-        uint256 amount;
-        uint256 stakedTime;
-        uint256 rewardAmount;
+    struct Leverage {
+        uint256 collateral;
+        uint64 postion; // Pack struct into 3 slots.
+        address asset;
+    }
+
+    struct Account {
+        uint256 totalCollateral;
+        uint256 totalPostion; // Pack struct into 3 slots.
+        Leverage[] leverages;
     }
 
     struct Map {
         address[] keys;
-        mapping(address => StakeInfo) values;
+        mapping(address => Account) accounts;
         mapping(address => uint256) indexOf;
         mapping(address => bool) inserted;
     }
@@ -17,9 +23,9 @@ library IterableMapping {
     function get(Map storage map, address key)
         internal
         view
-        returns (StakeInfo memory)
+        returns (Account memory)
     {
-        return map.values[key];
+        return map.accounts[key];
     }
 
     function getIndexOfKey(Map storage map, address key)
@@ -48,13 +54,13 @@ library IterableMapping {
     function add(
         Map storage map,
         address key,
-        StakeInfo memory val
+        Account memory val
     ) internal {
         if (map.inserted[key]) {
-            map.values[key] = val;
+            map.accounts[key] = val;
         } else {
             map.inserted[key] = true;
-            map.values[key] = val;
+            map.accounts[key] = val;
             map.indexOf[key] = map.keys.length;
             map.keys.push(key);
         }
@@ -66,7 +72,7 @@ library IterableMapping {
         }
 
         delete map.inserted[key];
-        delete map.values[key];
+        delete map.accounts[key];
 
         uint256 index = map.indexOf[key];
         uint256 lastIndex = map.keys.length - 1;
