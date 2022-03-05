@@ -1,7 +1,7 @@
 
 # AMM
 
-AMM is comprisedd of two smart contracts AMMExchange and LeverageTrade. This project uses the hardhat framework for contract development and deployment. 
+AMM is comprised of two smart contracts AMMExchange and LeverageTrade. This project uses the hardhat framework for contract development and deployment. 
 
 ### AMMExchange
 The AMMExchange contract defines an exchange supporting the swapping of ERC20 tokens (TWD and USD).
