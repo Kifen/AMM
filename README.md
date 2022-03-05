@@ -26,4 +26,4 @@ $ git clone git@github.com:Kifen/AMM.git
 $ cd AMM
 $ npm install
 ```
-To run test, `npx hardhat test`
+To run test, `npm run test`
