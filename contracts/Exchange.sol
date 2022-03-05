@@ -135,10 +135,7 @@ contract AMMExchange {
         address to,
         uint256 amount
     ) internal {
-        require(
-            token.transferFrom(from, to, amount),
-            "AMMExchange: TRANSFER FAILED"
-        );
+        token.transferFrom(from, to, amount);
     }
 
     function _sufficientAllowance(

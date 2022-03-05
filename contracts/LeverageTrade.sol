@@ -185,4 +185,12 @@ contract LeverageTrade is AMMExchange {
     {
         return accounts[_account][_token];
     }
+
+    function getPositions(IERC20 _token, address _account)
+        external
+        view
+        returns (Position[] memory)
+    {
+        return positions[_account][_token];
+    }
 }
