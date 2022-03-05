@@ -6,11 +6,11 @@ AMM is comprisedd of two smart contracts AMMExchange and LeverageTrade. This pro
 ### AMMExchange
 The AMMExchange contract defines an exchange supporting the swapping of ERC20 tokens (TWD and USD).
 
-### Core Functions
+#### Core Functions
 - addLiquidity: adds liquidity to the pool
 - exchange: exchange an asset for another. When passing `path` as an argument to this function, the fist index is the input token and the second (last) index is the output token.
 
-#### LeverageTrade
+### LeverageTrade
 The LeverageTrade contract is an implementation of a Leverage AMM exchange. It supports depositing any ERC20 token as collateral and the leverage trading of and ERC20 token and Ethereum.
 
 #### Core Functions
