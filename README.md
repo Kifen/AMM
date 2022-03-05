@@ -11,7 +11,7 @@ The AMMExchange contract defines an exchange supporting the swapping of ERC20 to
 - exchange: exchange an asset for another. When passing `path` as an argument to this function, the fist index is the input token and the second (last) index is the output token.
 
 ### LeverageTrade
-The LeverageTrade contract is an implementation of a Leverage AMM exchange. It supports depositing any ERC20 token as collateral and the leverage trading of and ERC20 token and Ethereum.
+The LeverageTrade contract is an implementation of a Leverage AMM exchange. It supports depositing any ERC20 token as collateral and the leverage trading of any ERC20 token and Ethereum.
 
 #### Core Functions
 - depositToken: deposit collateral to the system. Ensure allowance has been set for the contract.
