@@ -13,26 +13,25 @@ contract LeverageTrade is AMMExchange {
     struct Account {
         uint256 collateral;
         uint64 totalLeverage;
-        // Long[] longPositions;
-        // Short[] shortPositions;
         bool enabled;
     }
 
-    struct Long {
+    // For a leveraged short position, `ethAmount` is the amount of ETH sold
+    //  For a leveraged long position, `ethAmount` is the amount of ETH bought
+    struct Position {
         uint256 ethAmount;
+        uint256 leverage;
+        uint256 lockedPrice; // ETH price at which position was opened
+        Side side;
     }
 
-    struct Short {
-        uint256 tokenAmount;
-        IERC20 token;
-    }
-
-    enum SIDE {
+    enum Side {
         LONG,
         SHORT
     }
 
     mapping(address => mapping(IERC20 => Account)) private accounts;
+    mapping(address => mapping(IERC20 => Position[])) private positions;
 
     event DepositToken(
         address indexed account,
@@ -86,8 +85,16 @@ contract LeverageTrade is AMMExchange {
         return _amount / _leverage;
     }
 
-    function getAccountValue(IERC20 _token) external view returns (uint256) {
+    function getRemAccountValue(IERC20 _token) external view returns (uint256) {
         Account memory account = accounts[msg.sender][_token];
+        return _getRemAccountValue(account);
+    }
+
+    function _getRemAccountValue(Account memory account)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 collateral = account.collateral;
         uint64 maxLeverage = MAX_LEVERAGE;
         uint64 currentLeverage = account.totalLeverage;
@@ -95,34 +102,80 @@ contract LeverageTrade is AMMExchange {
         return (collateral * maxLeverage) - (collateral * currentLeverage);
     }
 
-    function openPosition(IERC20 _token, uint64 _leverage) external {
-        uint64 maxLeverage = MAX_LEVERAGE;
-        require(
-            _leverage <= maxLeverage,
-            "LeverageTrade: exceeded MAX_LEVERAGE"
-        );
-
+    function openLongPosition(IERC20 _token, uint64 _leverage) external {
         Account memory account = accounts[msg.sender][_token];
-        uint64 remLeverage = maxLeverage - account.totalLeverage;
-        uint256 collateral = account.collateral;
+        _openPosition(_token, account, _leverage, Side.LONG);
+    }
 
-        require(remLeverage >= _leverage, "LeverageTrade: exceeded leverage");
-        require(collateral > 0, "LeverageTrade: insufficient collateral");
+    function openShortPosition(IERC20 _token, uint64 _leverage) external {
+        Account memory account = accounts[msg.sender][_token];
+        _openPosition(_token, account, _leverage, Side.SHORT);
+    }
 
-        account.totalLeverage = account.totalLeverage + _leverage;
-        accounts[msg.sender][_token] = account;
+    function _openPosition(
+        IERC20 _token,
+        Account memory _account,
+        uint64 _leverage,
+        Side _side
+    ) internal {
+        uint256 collateral = _account.collateral;
+        uint256 expectedPositionValue = _leverage * collateral;
 
-        emit OpenPosition(
-            msg.sender,
-            _leverage,
-            collateral,
-            uint256(SIDE.LONG)
-        );
+        _precheck(_leverage, expectedPositionValue, _account); // sanity check
+
+        uint256 ethPriceUSD = getEthUsd();
+        uint256 postionValueETH = expectedPositionValue / ethPriceUSD;
+
+        Position[] storage position = positions[msg.sender][_token];
+
+        Position memory newposition;
+        if (_side == Side.LONG) {
+            newposition = Position(
+                postionValueETH,
+                _leverage,
+                ethPriceUSD,
+                Side.LONG
+            );
+        } else {
+            newposition = Position(
+                postionValueETH,
+                _leverage,
+                ethPriceUSD,
+                Side.SHORT
+            );
+        }
+
+        position.push(newposition);
+
+        _account.totalLeverage = _account.totalLeverage + _leverage;
+        accounts[msg.sender][_token] = _account;
+
+        emit OpenPosition(msg.sender, _leverage, collateral, uint256(_side));
     }
 
     function getEthUsd() public view returns (uint256) {
         (, int256 answer, , , ) = eth_usd_price_feed.latestRoundData();
 
         return uint256(answer * 10**10); // convert answer from 8 to 18 decimlas
+    }
+
+    function _precheck(
+        uint256 _leverage,
+        uint256 _expectedPositionValue,
+        Account memory _account
+    ) internal pure {
+        uint256 collateral = _account.collateral;
+        require(
+            _leverage <= MAX_LEVERAGE,
+            "LeverageTrade: exceeded MAX_LEVERAGE"
+        );
+
+        require(collateral > 0, "LeverageTrade: insufficient collateral");
+
+        uint256 remAccountValue = _getRemAccountValue(_account);
+        require(
+            _expectedPositionValue <= remAccountValue,
+            "LeverageTrade: exceeded MAX position"
+        );
     }
 }
