@@ -39,7 +39,7 @@ $ npm install
 To run test, `npm run test`
 
 ### Test
-These contracts have been integrated to a [oneclickdapp](https://oneclickdapp.com/). To test via a GUI, make use of:
+These contracts have been integrated to [oneclickdapp](https://oneclickdapp.com/). To test via a GUI, make use of:
 
 - [AMMExchange Dapp](https://oneclickdapp.com/cricket-equal)
 - [LeverageTrade Dapp](https://oneclickdapp.com/cotton-clark)
