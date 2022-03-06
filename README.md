@@ -45,3 +45,5 @@ These contracts have been integrated to a [oneclickdapp](https://oneclickdapp.co
 - [LeverageTrade Dapp](https://oneclickdapp.com/cotton-clark)
 - [USD Coin Dapp](https://oneclickdapp.com/dance-rodent)
 - [TWD Token Dapp](https://oneclickdapp.com/chief-panama)
+
+The USD Coin Dapp and TWD Token Dapp can be used to interact with the pool tokens for the AMMExchange; especially minting and setting allowances and approvals.
