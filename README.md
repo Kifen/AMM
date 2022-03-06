@@ -19,7 +19,7 @@ The LeverageTrade contract is an implementation of a Leverage AMM exchange. It s
 - openLongPosition: opens a leveraged position; buys ETH
 - openShortPosition: opens a leveraged position; sells ETH
 
-# Deployments
+#### Deployments
 - LeverageTrade: 0x629DF2aDDd186C7B867b4E1Ee0D3634717Af6993
 - AMMExchnage: 0x1195E923B547D2D0f2F61ddd698D5265795dA1fc
 - USD Coin: 0xD87820A96043011c5442141ddb8a1607561dB922
