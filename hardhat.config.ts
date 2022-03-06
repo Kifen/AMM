@@ -7,6 +7,9 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
+import "./tasks/deploy";
+import "./tasks/call";
+
 dotenv.config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -34,8 +37,8 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
+    rinkeby: {
+      url: process.env.RINKEBY_URL || "",
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
