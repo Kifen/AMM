@@ -18,6 +18,9 @@ The LeverageTrade contract is an implementation of a Leverage AMM exchange. It s
 - getRemAccountValue: retrives the remaining account value for a pool
 - openLongPosition: opens a leveraged position; buys ETH
 - openShortPosition: opens a leveraged position; sells ETH
+- getAmountOut: input the amount of asset A and the leverage, and it returns the amount of asset B you will get after exchange
+- getAmountOut2: input the amount of asset B you want to exchange and the leverage, and it returns the amount of asset A you should provide
+- getPositions: view your leveraged positions for a set pool
 
 #### Deployments
 - LeverageTrade: 0x629DF2aDDd186C7B867b4E1Ee0D3634717Af6993
@@ -32,4 +35,11 @@ $ git clone git@github.com:Kifen/AMM.git
 $ cd AMM
 $ npm install
 ```
+
 To run test, `npm run test`
+
+### Test
+These contracts have been integrated to a [oneclickdapp](https://oneclickdapp.com/). To test via a GUI, make use of:
+
+- [AMMExchange Dapp](https://oneclickdapp.com/cricket-equal)
+- [LeverageTrade Dapp](https://oneclickdapp.com/cotton-clark)
